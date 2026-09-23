@@ -120,6 +120,9 @@ frontend/
   index.html
   vite.config.js
   package.json
+
+Dockerfile
+.env.example
 ```
 
 ## Prerequisites
@@ -223,28 +226,54 @@ If the backend API runs on a different URL, create `frontend/.env` from `fronten
 
 ## Deployment
 
-### Backend (Spring Boot)
+### Backend (Spring Boot) on Render
 
-The backend is a Java Spring Boot application. It must be deployed on a platform that supports Java, such as:
+The backend is packaged as a Docker container and deployed on [Render](https://render.com), which supports Docker deployments with a free tier.
 
-- [Railway](https://railway.app) — simple, free tier available
-- [Render](https://render.com) — supports Java, free tier available
-- [Heroku](https://heroku.com) — supports Java
+#### Steps to deploy on Render
 
-Vercel does NOT run Java backends. Do not try to deploy the Spring Boot backend to Vercel.
-
-### Frontend (React)
-
-The React frontend is a plain static site built with Vite. It can be deployed to:
-
-- [Vercel](https://vercel.com)
-- [Netlify](https://netlify.com)
-
-Before deploying the frontend, set the environment variable `VITE_API_BASE_URL` to the public URL of your deployed backend. For example:
+1. Push this project to a GitHub repository.
+2. Go to [render.com](https://render.com) and create a new **Web Service**.
+3. Connect your GitHub repository.
+4. Render will automatically detect the `Dockerfile`.
+5. Set the following **Environment Variables** in the Render dashboard:
 
 ```text
-VITE_API_BASE_URL=https://your-backend-url.railway.app
+DB_URL        = jdbc:mysql://<your-mysql-host>:3306/healthcare_claims_db
+DB_USERNAME   = your_mysql_username
+DB_PASSWORD   = your_mysql_password
 ```
+
+You can create a free MySQL database on [Railway](https://railway.app) or [PlanetScale](https://planetscale.com) and use those credentials here.
+
+6. Click **Deploy**. Render builds the Docker image and starts the service.
+
+The API will be available at the URL Render assigns, for example:
+
+```text
+https://healthcare-claims-management-system.onrender.com
+```
+
+#### How the Dockerfile works
+
+The `Dockerfile` uses a two-stage build to keep the final image small:
+
+1. **Stage 1 (build):** Uses a Maven + JDK image to compile the code and produce a JAR file.
+2. **Stage 2 (run):** Uses a smaller JRE-only image and copies just the JAR into it.
+
+The app starts with the `mysql` Spring profile so it reads `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` from environment variables.
+
+### Frontend (React) on Vercel
+
+The React frontend is a static site built with Vite. Deploy it to [Vercel](https://vercel.com) or [Netlify](https://netlify.com).
+
+Before deploying, set this environment variable in the Vercel dashboard:
+
+```text
+VITE_API_BASE_URL = https://your-render-backend-url.onrender.com
+```
+
+Vercel does NOT run Java backends. The Spring Boot backend must be on Render or a similar platform.
 
 ## API Endpoints
 
