@@ -1,0 +1,33 @@
+# Maven build output
+target/
+
+# Local embedded database files
+data/
+
+# Project-local Maven downloaded by mvnw.cmd
+.mvn/apache-maven-*/
+.mvn/*.zip
+
+# React build output and dependencies
+frontend/node_modules/
+frontend/dist/
+
+# Java compiled files
+*.class
+
+# Environment variables and secrets
+.env
+*.env.local
+frontend/.env
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

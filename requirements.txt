@@ -1,0 +1,7 @@
+# This is a Java/Spring Boot project, so application dependencies are managed in pom.xml.
+# Use this file as a simple setup checklist.
+
+Java 17
+Maven
+MySQL Server
+Postman
