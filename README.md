@@ -1,18 +1,39 @@
 # Healthcare Claims Management System
 
-A RESTful backend application for managing patient records and healthcare insurance claims. The system provides structured APIs for patient registration, claim submission, claim review, and claim status updates.
+A full-stack web application for managing patient records and healthcare insurance claims. The Spring Boot backend provides a REST API and the React frontend provides a browser-based UI to interact with it.
+
+## Live Demo
+
+| Service | URL |
+| --- | --- |
+| Backend API | https://healthcare-claims-management-system.onrender.com |
+| Frontend UI | https://healthcare-claims-management-system-ui.onrender.com |
 
 ## Overview
-
-Healthcare Claims Management System helps organize core claim-processing workflows:
 
 - Manage patient information
 - Register healthcare claims against patients
 - Track claim status
 - Approve or reject submitted claims
-- Persist patient and claim data in MySQL
+- Data is stored in a cloud MySQL database (Aiven)
 
-The application follows a clean layered architecture with separate controller, service, repository, and persistence layers.
+The application follows a clean layered architecture:
+
+```text
+Client (React)
+  |
+  v
+Controller
+  |
+  v
+Service
+  |
+  v
+Repository
+  |
+  v
+MySQL Database (Aiven)
+```
 
 ## Tech Stack
 
@@ -21,8 +42,9 @@ The application follows a clean layered architecture with separate controller, s
 - Spring Web
 - Spring Data JPA
 - Spring Validation
-- MySQL
+- MySQL (Aiven cloud database)
 - Maven
+- Docker
 - React
 - Vite
 - JUnit
@@ -66,31 +88,13 @@ Supported claim statuses:
 PENDING, APPROVED, REJECTED
 ```
 
-## Architecture
-
-```text
-Client
-  |
-  v
-Controller
-  |
-  v
-Service
-  |
-  v
-Repository
-  |
-  v
-MySQL Database
-```
-
-The controller layer exposes REST endpoints, the service layer handles business logic, the repository layer performs database operations, and MySQL stores application data.
-
 ## Project Structure
 
 ```text
 src/main/java/com/example/healthcareclaims
   HealthcareClaimsManagementApplication.java
+  config/
+    WebConfig.java              (global CORS configuration)
   controller/
     PatientController.java
     ClaimController.java
@@ -106,8 +110,8 @@ src/main/java/com/example/healthcareclaims
     ClaimStatus.java
 
 src/main/resources
-  application.properties          (default profile, uses H2)
-  application-mysql.properties    (mysql profile, uses MySQL)
+  application.properties          (default profile, uses H2 for local dev)
+  application-mysql.properties    (mysql profile, used in production)
 
 src/test/java
   service/
@@ -127,10 +131,10 @@ Dockerfile
 
 ## Prerequisites
 
+To run locally you need:
+
 - Java 17
 - Maven
-- MySQL Server
-- API client such as Postman
 
 Check Java:
 
@@ -144,71 +148,47 @@ Check Maven:
 mvn -version
 ```
 
-## Database Setup
+## Running Locally
 
-By default, the application runs with a local embedded H2 database stored in the `data/` folder. This lets the API start without requiring database credentials.
+### Option 1 — H2 embedded database (no setup needed)
 
-To run with MySQL, create the MySQL database:
-
-```sql
-CREATE DATABASE healthcare_claims_db;
-```
-
-Then update database credentials in:
-
-```text
-.env
-```
-
-Create your local environment file from the example:
-
-```bash
-cp .env.example .env
-```
-
-Then update `.env`:
-
-```properties
-DB_URL=jdbc:mysql://localhost:3306/healthcare_claims_db
-DB_USERNAME=root
-DB_PASSWORD=your_mysql_password
-```
-
-Run the backend with the MySQL profile:
-
-```bat
-mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=mysql
-```
-
-Database tables are managed by Spring Data JPA using:
-
-```properties
-spring.jpa.hibernate.ddl-auto=update
-```
-
-If MySQL startup fails with `Access denied for user 'root'@'localhost'`, update `DB_USERNAME` and `DB_PASSWORD` in `.env` with the same MySQL credentials you use to log in locally.
-
-## Running The Application
-
-From the project root folder, run:
-
-```bash
-mvn spring-boot:run
-```
-
-The API starts at:
-
-```text
-http://localhost:8080
-```
-
-On Windows, if `mvn` is not installed globally, use the included project runner:
+This is the easiest way to run the project locally. No database credentials required.
 
 ```bat
 mvnw.cmd spring-boot:run
 ```
 
-In another terminal, start the React UI:
+The API starts at:
+
+```
+http://localhost:8080
+```
+
+### Option 2 — Aiven cloud MySQL (same database as production)
+
+Create a `.env` file in the project root:
+
+```bash
+cp .env.example .env
+```
+
+Fill in your Aiven credentials in `.env`:
+
+```properties
+DB_URL=jdbc:mysql://<your-aiven-host>:<port>/defaultdb?sslMode=REQUIRED
+DB_USERNAME=your_aiven_username
+DB_PASSWORD=your_aiven_password
+```
+
+Then run with the mysql profile:
+
+```bat
+mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=mysql
+```
+
+### Start the React frontend
+
+In a second terminal:
 
 ```bash
 cd frontend
@@ -218,62 +198,104 @@ npm run dev
 
 The UI starts at:
 
-```text
+```
 http://localhost:5173
 ```
 
-If the backend API runs on a different URL, create `frontend/.env` from `frontend/.env.example` and update `VITE_API_BASE_URL`.
+If your backend is running on a different URL, create `frontend/.env` and set:
+
+```
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+## Environment Variables
+
+The backend reads these three variables when running with the `mysql` profile:
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `DB_URL` | JDBC connection string for MySQL | `jdbc:mysql://host:port/defaultdb?sslMode=REQUIRED` |
+| `DB_USERNAME` | MySQL username | `avnadmin` |
+| `DB_PASSWORD` | MySQL password | `your_password` |
+
+Locally these are read from the `.env` file in the project root.
+In production these are set as environment variables in the Render dashboard.
+
+The `.env` file is gitignored and must never be committed. Use `.env.example` as a reference.
 
 ## Deployment
 
-### Backend (Spring Boot) on Render
+### Backend on Render
 
-The backend is packaged as a Docker container and deployed on [Render](https://render.com), which supports Docker deployments with a free tier.
+The backend is deployed on [Render](https://render.com) as a Docker web service.
 
-#### Steps to deploy on Render
+#### How to deploy
 
 1. Push this project to a GitHub repository.
 2. Go to [render.com](https://render.com) and create a new **Web Service**.
 3. Connect your GitHub repository.
-4. Render will automatically detect the `Dockerfile`.
-5. Set the following **Environment Variables** in the Render dashboard:
+4. Render detects the `Dockerfile` automatically.
+5. Set these environment variables in the Render dashboard under **Environment**:
 
 ```text
-DB_URL        = jdbc:mysql://<your-mysql-host>:3306/healthcare_claims_db
-DB_USERNAME   = your_mysql_username
-DB_PASSWORD   = your_mysql_password
+DB_URL        = jdbc:mysql://<aiven-host>:<port>/defaultdb?sslMode=REQUIRED
+DB_USERNAME   = your_aiven_username
+DB_PASSWORD   = your_aiven_password
 ```
 
-You can create a free MySQL database on [Railway](https://railway.app) or [PlanetScale](https://planetscale.com) and use those credentials here.
-
-6. Click **Deploy**. Render builds the Docker image and starts the service.
-
-The API will be available at the URL Render assigns, for example:
-
-```text
-https://healthcare-claims-management-system.onrender.com
-```
+6. Click **Save Changes**. Render rebuilds and redeploys automatically.
 
 #### How the Dockerfile works
 
-The `Dockerfile` uses a two-stage build to keep the final image small:
+The `Dockerfile` uses a two-stage build:
 
-1. **Stage 1 (build):** Uses a Maven + JDK image to compile the code and produce a JAR file.
-2. **Stage 2 (run):** Uses a smaller JRE-only image and copies just the JAR into it.
+- **Stage 1:** Maven + JDK image compiles the code and produces a JAR file.
+- **Stage 2:** A smaller JRE-only image runs the JAR.
 
-The app starts with the `mysql` Spring profile so it reads `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` from environment variables.
+The app starts with `-Dspring.profiles.active=mysql` so it reads credentials from environment variables instead of the `.env` file.
 
-### Frontend (React) on Vercel
+### Frontend on Render
 
-The React frontend is a static site built with Vite. Deploy it to [Vercel](https://vercel.com) or [Netlify](https://netlify.com).
+The React frontend is deployed on Render as a static site.
 
-Before deploying, set this environment variable in the Vercel dashboard:
+#### How to deploy
 
-```text
-VITE_API_BASE_URL = https://your-render-backend-url.onrender.com
+1. Go to [render.com](https://render.com) and create a new **Static Site**.
+2. Connect the same GitHub repository.
+3. Set **Build Command** to:
+
+```bash
+cd frontend && npm install && npm run build
 ```
 
-Vercel does NOT run Java backends. The Spring Boot backend must be on Render or a similar platform.
+4. Set **Publish Directory** to:
+
+```
+frontend/dist
+```
+
+5. Set this environment variable in the Render dashboard:
+
+```text
+VITE_API_BASE_URL = https://healthcare-claims-management-system.onrender.com
+```
+
+6. Click **Save Changes**.
+
+### Database on Aiven
+
+The production database is a free MySQL instance on [Aiven](https://aiven.io).
+
+1. Sign up at [console.aiven.io](https://console.aiven.io).
+2. Create a new **MySQL** service (free tier).
+3. Copy the connection details from the Aiven dashboard.
+4. Set them as environment variables in your Render backend service.
+
+Tables are created automatically by Spring Data JPA on first startup using:
+
+```properties
+spring.jpa.hibernate.ddl-auto=update
+```
 
 ## API Endpoints
 
@@ -390,9 +412,8 @@ The API validates incoming request data:
 
 The API returns errors for common failure cases:
 
-- Patient not found
-- Claim not found
-- Invalid request data
+- `404 Not Found` — patient or claim does not exist
+- `400 Bad Request` — invalid input data
 
 ## Testing
 
@@ -402,13 +423,13 @@ Run automated tests:
 mvn test
 ```
 
-Recommended manual API test flow:
+Recommended manual API test flow using Postman or the live frontend:
 
-1. `POST /patients`
-2. `GET /patients`
-3. `GET /patients/1`
-4. `POST /claims`
-5. `GET /claims`
-6. `PUT /claims/1/approve`
-7. `PUT /claims/1/reject`
-8. `DELETE /claims/1`
+1. `POST /patients` — create a patient
+2. `GET /patients` — confirm patient appears
+3. `POST /claims` — create a claim for that patient
+4. `GET /claims` — confirm claim appears with status PENDING
+5. `PUT /claims/1/approve` — approve the claim
+6. `GET /claims/1` — confirm status is now APPROVED
+7. `DELETE /claims/1` — delete the claim
+8. `DELETE /patients/1` — delete the patient
